@@ -147,8 +147,34 @@ kubectl attach kube-dns-123 -c skydns --namespace=kube-system
 ## k8s分布式网络
 
 ## k8s调度
+- k8s资源分为两种属性：
+    + 可压缩资源，例如CPU循环，Disk I/O带宽，都是可以被限制和回收的。
+    + 不可压缩资源：内存、硬盘空间（不杀掉pod就无法收回）
+    + 未来，k8s会加入更多资源：网络带宽，存储IOPS支持
+- k8s调度器使用Predicates和Priorities来决定一个pod运行在哪个node上
+- Predicates：强制性规则
+    + PodFitPorts：没有任何端口冲突
+    + PodFitsResurce：有足够的资源运行Pod
+    + NoDiskConflict：有足够的空间来满足Pod和链接的数据卷
+    + MatchNodeSelector：能够匹配Pod中的选择器查找参数
+    + HostName：能够匹配Pod中的Host参数
+- Proorities：如果调度器发现多个主机满足条件，则用Priorities来判断哪个主机最适合运行pod。Priorities是一个键值对，key为名称，value是权重
+    + LeastRequestdRriority：计算Pods需要的CPU和内存在当前节点可用资源的百分比，具有最小百分比的节点就是最优的
+    + BalanceResourceAllocation：拥有类似内存和CPU使用的节点
+    + ServicesSpreadingPriority：优先选择拥有不同Pods的节点
+    + EqualPriority：给所有集群的节点同样的优先级，仅仅是为了做测试
+- 节点的调度规则是采用的plugin方式，可自行编写调度策略进行调度打分处理。
+    
 
 ## k8s-api使用
 
+## 使用教程
+- 部署方案
+kubeadm部署的基于calio网络的分布式架构
+kubectl v1.10.0
+master 10.X.X.32
+node1 10.X.X.33
+node2 10.X.X.34
 
-
+- 实际调用
+python k8s_test.py
