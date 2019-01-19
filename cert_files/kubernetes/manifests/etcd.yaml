@@ -13,17 +13,17 @@ spec:
   containers:
   - command:
     - etcd
-    - --listen-client-urls=https://127.0.0.1:2379
     - --advertise-client-urls=https://127.0.0.1:2379
-    - --client-cert-auth=true
     - --peer-client-cert-auth=true
+    - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    - --listen-client-urls=https://127.0.0.1:2379
+    - --client-cert-auth=true
     - --data-dir=/var/lib/etcd
+    - --cert-file=/etc/kubernetes/pki/etcd/server.crt
     - --key-file=/etc/kubernetes/pki/etcd/server.key
     - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
-    - --cert-file=/etc/kubernetes/pki/etcd/server.crt
-    - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
     - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
-    - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
     image: k8s.gcr.io/etcd-amd64:3.1.12
     livenessProbe:
       exec:

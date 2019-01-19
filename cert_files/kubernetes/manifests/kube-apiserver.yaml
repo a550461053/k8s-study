@@ -13,27 +13,27 @@ spec:
   containers:
   - command:
     - kube-apiserver
-    - --service-cluster-ip-range=10.96.0.0/12
-    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
-    - --enable-bootstrap-token-auth=true
     - --allow-privileged=true
-    - --requestheader-username-headers=X-Remote-User
     - --requestheader-group-headers=X-Remote-Group
     - --requestheader-extra-headers-prefix=X-Remote-Extra-
-    - --advertise-address=10.10.7.32
-    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
     - --requestheader-allowed-names=front-proxy-client
-    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
-    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    - --service-cluster-ip-range=10.96.0.0/12
+    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --enable-bootstrap-token-auth=true
     - --secure-port=6443
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
     - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
     - --insecure-port=0
+    - --requestheader-username-headers=X-Remote-User
+    - --advertise-address=10.10.7.32
+    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota
     - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
-    - --client-ca-file=/etc/kubernetes/pki/ca.crt
-    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
-    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
-    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
     - --authorization-mode=Node,RBAC
     - --etcd-servers=https://127.0.0.1:2379
     - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
@@ -69,6 +69,10 @@ spec:
   hostNetwork: true
   volumes:
   - hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+    name: k8s-certs
+  - hostPath:
       path: /etc/ssl/certs
       type: DirectoryOrCreate
     name: ca-certs
@@ -76,8 +80,4 @@ spec:
       path: /etc/pki
       type: DirectoryOrCreate
     name: ca-certs-etc-pki
-  - hostPath:
-      path: /etc/kubernetes/pki
-      type: DirectoryOrCreate
-    name: k8s-certs
 status: {}

@@ -13,15 +13,15 @@ spec:
   containers:
   - command:
     - kube-controller-manager
-    - --kubeconfig=/etc/kubernetes/controller-manager.conf
-    - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
-    - --use-service-account-credentials=true
     - --controllers=*,bootstrapsigner,tokencleaner
-    - --root-ca-file=/etc/kubernetes/pki/ca.crt
     - --service-account-private-key-file=/etc/kubernetes/pki/sa.key
-    - --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt
+    - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
     - --address=127.0.0.1
     - --leader-elect=true
+    - --use-service-account-credentials=true
+    - --kubeconfig=/etc/kubernetes/controller-manager.conf
+    - --root-ca-file=/etc/kubernetes/pki/ca.crt
+    - --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt
     - --allocate-node-cidrs=true
     - --cluster-cidr=192.168.0.0/16
     - --node-cidr-mask-size=24
@@ -43,12 +43,6 @@ spec:
       requests:
         cpu: 200m
     volumeMounts:
-    - mountPath: /etc/kubernetes/pki
-      name: k8s-certs
-      readOnly: true
-    - mountPath: /etc/ssl/certs
-      name: ca-certs
-      readOnly: true
     - mountPath: /etc/kubernetes/controller-manager.conf
       name: kubeconfig
       readOnly: true
@@ -56,6 +50,12 @@ spec:
       name: flexvolume-dir
     - mountPath: /etc/pki
       name: ca-certs-etc-pki
+      readOnly: true
+    - mountPath: /etc/kubernetes/pki
+      name: k8s-certs
+      readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
       readOnly: true
   hostNetwork: true
   volumes:
