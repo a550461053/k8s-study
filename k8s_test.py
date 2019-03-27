@@ -8,6 +8,29 @@ class KubernetesOperation():
     def __init__(self, k8s_params):
         self.k8s_config = client.Configuration()
         self.k8s_params = k8s_params
+        # 配置好client
+        client.Configuration.set_default(self.k8s_params)
+
+        self.extendv1client = client.ExtensionsV1betaApi()
+        self.corev1client = client.CoreV1Api()
+        self.support_namespace = ["Deployment", "Service", "PersistentVolumeClaim", "Pod"]
+
+        self.create_func_dict = {
+            "Deployment": self._create_deployment,
+            "Service": self._create_service,
+            "PersistentVolume": self._create_persistent_volume,
+            "PersistentVolumeClaim": self._create_persistent_volume_claim,
+            "Namespace": self._create_namespace
+        }
+
+        self.delete_func_dict = {
+            "Deployment": self._delete_deployment,
+            "Service": self._delete_service,
+            "PersistentVolume": self._delete_persistent_volume,
+            "PersistentVolumeClaim": self._delete_persistent_volume_claim,
+            "Pod": self._delete_pod,
+            "Namespace": self._delete_namespace
+        }
 
     def _get_config_from_params(self):
         k8s_config = client.Configuration()
@@ -102,7 +125,124 @@ class KubernetesOperation():
             )
             logger.error("kubernetes host error msg: {}".format(e))
             raise Exception(error_msg)
+       
+    def _get_node_ip(self, node_name):
+        ret = self.corev1client.list_node()
+        ip = ""
+        for i in ret.items:
+            for addr in i.status.addresses:
+                if addr.type == "ExternalIP":
+                    ip = addr.address
+                elif addr.type = "InternalIP":
+                    ip = addr.address
+                else:
+                    continue
+        return ip
+    
+    def _get_node_ip_of_service(self, service_name):
+        ret = self.corev1client.list_pod_for_all_namespaces(watch=False)
+
+        for i in ret.items:
+            for i.metadata.name.startswith(service_name):
+                return self._get_node_ip(i.spec.node_name)
+
+    def _get_service_external_port(self, namespace, ip):
+        ret = self.corev1client.list_service_for_all_namespaces(watch=False)
+        results = {}
+        r_template = ip + ":" + "{}"
+        for i in ret.items:
+            if i.metadata.namespace == namespace:
+                tmp_name = i.metadata.name.replace("-", "_")
+                if i.metadata.name.startswith("peer"):
+                    for port in i.spec.ports:
+                        if port.name == "externale-listen-endpoint":
+                            external_port = port.node_port
+                            name = tmp_name + "_grpc"
+                            value = r_template.format(external_port)
+                        elif port.name == "listen":
+                            event_port = port.node_port
+                            name = tmp_name + "_event"
+                            value = r_template.format(event_port)
+                        else:
+                            continue
+                        results[name] = value
+                elif i.metadata.name.startswith("ca"):
+                    name = tmp_name + "_ecap"
+                    for port in i.spec.ports:
+                        _port = port.node_port
+                        value = r_template.format(_port)
+                        results[name] = value
+                elif i.metadata.name.startswith("orderer0"):
+                    name = "orderer0"
+                    for port in i.spec.ports:
+                        _port = port.node_port
+                        value = r_template.format(_port)
+                        results[name] = value
+
+                elif i.metadata.name.startswith("orderer1"):
+                    name = "orderer1"
+                    for port in i.spec.ports:
+                        _port = port.node_port
+                        value = r_template.format(_port)
+                        results[name] = value
+                else:
+                    continue
+        return results
+
+
+    def get_services_urls(self, cluster_name):
+        ret = self.corev1client.list_service_for_all_namespaces(watch=False)
+        service = ""
+        for i in ret.items:
+            if i.metadata.namespace == cluster_name:
+                service = i.metadata.name
+                break
+        service_ip = self._get_node_ip_of_service(service)
+        service_urls = self._get_service_external_port(cluster_name, service_ip)
+
+    def _filter_pod_name(self, namespace, search_name):
+        ret = self.corev1client.list_pod_for_all_namespaces(watch=False)
+        pod_list = []
+        for i in ret.items:
+            if (i.metadata.namespace == namespace and i.metadata.name.startswith(search_name)):
+                pod_list.append(i.metadata.name)
+        return pod_list
+
+    def _is_cluster_pods_running(self, namespace):
+        ret = self.corev1client.list_pod_for_all_namespaces(watch=False)
+        for i in ret.items:
+            if i.metadata.namespace == namespace:
+                if not i.status.phase == "Running":
+                    return False
+        return True
+
+    def check_pod_status(self, namespace, pod_name):
+        """
+        Pending:创建pod的请求已经被k8s接受，但是容器并没有启动
+        Running:pod已经绑定到node节点，并且至少有一个容器已经启动
+        Succeeded:pod中的所有容器已经正常的自行退出，并且k8s永远不会自动重启这些容器
+        Failed:pod中的所有容器以及终止，并且至少有一个容器已经终止于失败
+        Unknown:由于某种原因无法获得pod状态，一般是与pod的主机通信错误
+        """
+        ret = self.corev1client.list_pod_for_all_namespaces(watch=False)
+        for i in ret.items:
+            if i.metadata.namespace == namespace and pod_name in i.metadata.name:
+                status = i.status.phase
+        return status
         
+    def _pod_exec_command(self, command, namespace, pod_name, container_name):
+        bash_command = ["/bin/sh", "-c", command]
+        print("namespace:{}, pod_name:{}, container_name:{}".format(namespace, pod_name, container_name))
+        try:
+            resp = stream(self.corev1client.connect_get_namespaced_pod_exec, pod_name, namespace, command=bash_command, container_name=container_name, stdout=True)
+            print(resp)
+        except client.rest.ApiException as e:
+            print(e)
+        except Exception as e:
+            print(e)
+
+            
+
 # k8s cert file path
 k8s_root_path = 'cert_files/kubernetes'
 
