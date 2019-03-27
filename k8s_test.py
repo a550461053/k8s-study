@@ -9,28 +9,28 @@ class KubernetesOperation():
         self.k8s_config = client.Configuration()
         self.k8s_params = k8s_params
         # 配置好client
-        client.Configuration.set_default(self.k8s_params)
+        #client.Configuration.set_default(self.k8s_params)
 
-        self.extendv1client = client.ExtensionsV1betaApi()
-        self.corev1client = client.CoreV1Api()
-        self.support_namespace = ["Deployment", "Service", "PersistentVolumeClaim", "Pod"]
+        #self.extendv1client = client.ExtensionsV1betaApi()
+        #self.corev1client = client.CoreV1Api()
+        #self.support_namespace = ["Deployment", "Service", "PersistentVolumeClaim", "Pod"]
 
-        self.create_func_dict = {
-            "Deployment": self._create_deployment,
-            "Service": self._create_service,
-            "PersistentVolume": self._create_persistent_volume,
-            "PersistentVolumeClaim": self._create_persistent_volume_claim,
-            "Namespace": self._create_namespace
-        }
+        #self.create_func_dict = {
+        #    "Deployment": self._create_deployment,
+        #    "Service": self._create_service,
+        #    "PersistentVolume": self._create_persistent_volume,
+        #    "PersistentVolumeClaim": self._create_persistent_volume_claim,
+        #    "Namespace": self._create_namespace
+        #}
 
-        self.delete_func_dict = {
-            "Deployment": self._delete_deployment,
-            "Service": self._delete_service,
-            "PersistentVolume": self._delete_persistent_volume,
-            "PersistentVolumeClaim": self._delete_persistent_volume_claim,
-            "Pod": self._delete_pod,
-            "Namespace": self._delete_namespace
-        }
+        #self.delete_func_dict = {
+        #    "Deployment": self._delete_deployment,
+        #    "Service": self._delete_service,
+        #    "PersistentVolume": self._delete_persistent_volume,
+        #    "PersistentVolumeClaim": self._delete_persistent_volume_claim,
+        #    "Pod": self._delete_pod,
+        #    "Namespace": self._delete_namespace
+        #}
 
     def _get_config_from_params(self):
         k8s_config = client.Configuration()
@@ -133,7 +133,7 @@ class KubernetesOperation():
             for addr in i.status.addresses:
                 if addr.type == "ExternalIP":
                     ip = addr.address
-                elif addr.type = "InternalIP":
+                elif addr.type == "InternalIP":
                     ip = addr.address
                 else:
                     continue
@@ -143,7 +143,7 @@ class KubernetesOperation():
         ret = self.corev1client.list_pod_for_all_namespaces(watch=False)
 
         for i in ret.items:
-            for i.metadata.name.startswith(service_name):
+            if i.metadata.name.startswith(service_name):
                 return self._get_node_ip(i.spec.node_name)
 
     def _get_service_external_port(self, namespace, ip):
@@ -242,6 +242,12 @@ class KubernetesOperation():
             print(e)
 
             
+    def _patch_namespaced_pod(self, name, namespace, body):
+        body = {"spec":{"replicas":0}}
+        #ret = self.corev1client.patch_namespaced_pod(name, namespace, body)
+        #ret = client.CoreV1Api().patch_namespaced_pod_status(name, namespace, body)
+        ret = client.ExtensionsV1beta1Api().patch_namespaced_deployment(name, namespace, body)
+        print('the path_namespaced_pod:', ret)
 
 # k8s cert file path
 k8s_root_path = 'cert_files/kubernetes'
@@ -273,7 +279,7 @@ apiserver_kubelet_client_key_content = load_file(apiserver_kubelet_client_key_pa
 config_content = load_file(config_k8s_path)
 
 # test 
-k8s_cred_type = 'cert' # config, cert, account
+k8s_cred_type = 'config' # config, cert, account
 use_ssl = 'True' # True, False
 
 k8s_config_param = {
@@ -299,5 +305,10 @@ if k8s_host.refresh_status():
 else:
     print('k8s healthy fail!')
 
-print('find namespace:')        
-k8s_host.list_pods(namespace='qq1')
+print('find namespace:')      
+namespace = "baas-ewqasd1"
+k8s_host.list_pods(namespace=namespace)
+pod_name = "cli-iie6-7cbbdd75b5-2bj4v"
+pod_name = "peer0-iie2-5cc59b9d9c-sks2g"
+pod_name = "cli-iie2"
+k8s_host._patch_namespaced_pod(name=pod_name, namespace=namespace, body="")
